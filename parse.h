@@ -9,22 +9,26 @@ double line=1;
 #include <ctype.h>
 
 typedef struct{
-    double kind;
+    double center[3];
+    double color[3];
+    double radius;
+}Sphere;
+typedef struct{
+    double height;
+    double width;
+}Camera;
+typedef struct{
     double position[3];
-    union{
-        struct{
-            double color[3];
-            double radius;
-        }sphere;
-        struct{
-            double color[3];
-            double normal;
-        }plane;
-        struct{
-            double width;
-            double height;
-        }camera;
-    };
+    double color[3];
+    double normal[3];
+
+}Plane;
+typedef struct{
+    int kind;
+    Camera cam[1];
+    Sphere sphere[1];
+    Plane plane[1];
+
 }Object;
 int next_c(FILE* json) {
     int c = fgetc(json);
@@ -98,7 +102,7 @@ double next_number(FILE* json) {
     double value;
     fscanf(json, "%lf", &value);
     // Error check this..
-    printf("%lf\n",value);
+    //printf("%lf\n",value);
     return value;
 }
 
@@ -117,13 +121,15 @@ double* next_vector(FILE* json) {
     v[2] = next_number(json);
     skip_ws(json);
     expect_c(json, ']');
+    //printf("%f\n",v[0]);
     return v;
 }
 
 
 
-void read_scene(char* filename,Object** object) {
+void read_scene(char* filename,Object* object) {
     int c,i=0;
+
 
     FILE* json = fopen(filename, "r");
 
@@ -142,6 +148,9 @@ void read_scene(char* filename,Object** object) {
     // Find the objects
 
     while (1) {
+        Plane plane;
+        Sphere sphere;
+        Camera cam;
         c = fgetc(json);
         if (c == ']') {
             fprintf(stderr, "Error: This is the worst scene file EVER.\n");
@@ -167,11 +176,12 @@ void read_scene(char* filename,Object** object) {
             char* value = next_string(json);
 
             if (strcmp(value, "camera") == 0) {
-                object[i]->kind = 0;
+                object[i].kind=0;
+
             } else if (strcmp(value, "sphere") == 0) {
-                object[i]->kind = 1;
+                object[i].kind = 1;
             } else if (strcmp(value, "plane") == 0) {
-                object[i]->kind = 2;
+                object[i].kind = 2;
             } else {
                 fprintf(stderr, "Error: Unknown type, \"%s\", on line number %d.\n", value, line);
                 exit(1);
@@ -197,50 +207,45 @@ void read_scene(char* filename,Object** object) {
                         (strcmp(key, "radius") == 0)) {
                         double value = next_number(json);
                         if (strcmp(key, "width")==0) {
-                            object[i]->camera.width = value;
+                            cam.width=value;
                         } else if (strcmp(key, "height") == 0) {
-                            object[i]->camera.height = value;
+                            cam.height=value;
                         } else if (strcmp(key, "radius") == 0) {
-                            object[i]->sphere.radius = value;
+                            sphere.radius=value;
                         }
                     } else if ((strcmp(key, "color") == 0) ||
                                (strcmp(key, "position") == 0) ||
                                (strcmp(key, "normal") == 0)) {
                         double* value = next_vector(json);
                         if (strcmp(key, "color") == 0) {
-                            if (object[i]->kind == 1) {
-                                object[i]->sphere.color[0] = value[0];
-                                object[i]->sphere.color[1] = value[1];
-                                object[i]->sphere.color[2] = value[2];
+                            if (object[i].kind == 1) {
+                                sphere.color[0] = value[0];
+                                sphere.color[1] = value[1];
+                                sphere.color[2] = value[2];
                             }
-                            if (object[i]->kind == 2) {
-                                object[i]->plane.color[0] = value[0];
-                                object[i]->plane.color[1] = value[1];
-                                object[i]->plane.color[2] = value[2];
+                            if (object[i].kind == 2) {
+                                plane.color[0] = value[0];
+                                plane.color[1] = value[1];
+                                plane.color[2] = value[2];
                             }
                         }
                         if (strcmp(key, "position") == 0) {
-                            if (object[i]->kind == 0) {
-                                object[i]->position[0] = value[0];
-                                object[i]->position[1] = value[1];
-                                object[i]->position[2] = value[2];
+                            if (object[i].kind == 1) {
+                                sphere.center[0] = value[0];
+                                sphere.center[1]  = value[1];
+                                sphere.center[2]  = value[2];
                             }
-                            if (object[i]->kind == 1) {
-                                object[i]->position[0] = value[0];
-                                object[i]->position[1] = value[1];
-                                object[i]->position[2] = value[2];
-                            }
-                            if (object[i]->kind == 2) {
-                                object[i]->position[0] = value[0];
-                                object[i]->position[1] = value[1];
-                                object[i]->position[2] = value[2];
+                            if (object[i].kind == 2) {
+                                plane.position[0]  = value[0];
+                                plane.position[1]  = value[1];
+                                plane.position[2]  = value[2];
                             }
                         }
                         if (strcmp(key, "normal") == 0) {
-                            if (object[i]->kind == 2) {
-                                object[i]->position[0] = value[0];
-                                object[i]->position[1] = value[1];
-                                object[i]->position[2] = value[2];
+                            if (object[i].kind == 2) {
+                                plane.normal[0]  = value[0];
+                                plane.normal[1]  = value[1];
+                                plane.normal[2]  = value[2];
                             }
                         }
 
@@ -256,6 +261,9 @@ void read_scene(char* filename,Object** object) {
                     fprintf(stderr, "Error: Unexpected value on line %d\n", line);
                     exit(1);
                 }
+                object[i].cam[0]=cam;
+                object[i].sphere[0]=sphere;
+                object[i].plane[0]=plane;
             }
             skip_ws(json);
             c = next_c(json);
@@ -270,7 +278,8 @@ void read_scene(char* filename,Object** object) {
                 exit(1);
             }
         }
-    i++;}
+        i++;
+    }
 }
 
 
