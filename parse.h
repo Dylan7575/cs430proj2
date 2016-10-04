@@ -2,12 +2,9 @@
 // Created by Dylan La Frenz on 9/27/16.
 //
 double line=1;
-#include <stdlib.h>
-#include <stdio.h>
-#include<math.h>
-#include <string.h>
-#include <ctype.h>
 
+#include "includes.h"
+//creating a struct for sphere camera and plane
 typedef struct{
     double center[3];
     double color[3];
@@ -25,9 +22,9 @@ typedef struct{
 }Plane;
 typedef struct{
     int kind;
-    Camera cam[1];
-    Sphere sphere[1];
-    Plane plane[1];
+    Camera cam;
+    Sphere sphere;
+    Plane plane;
 
 }Object;
 int next_c(FILE* json) {
@@ -261,9 +258,9 @@ void read_scene(char* filename,Object* object) {
                     fprintf(stderr, "Error: Unexpected value on line %d\n", line);
                     exit(1);
                 }
-                object[i].cam[0]=cam;
-                object[i].sphere[0]=sphere;
-                object[i].plane[0]=plane;
+                object[i].cam=cam;
+                object[i].sphere=sphere;
+                object[i].plane=plane;
             }
             skip_ws(json);
             c = next_c(json);
@@ -271,6 +268,7 @@ void read_scene(char* filename,Object* object) {
                 // noop
                 skip_ws(json);
             } else if (c == ']') {
+               // printf("%f",object->sphere.radius);
                 fclose(json);
                 return;
             } else {
@@ -280,6 +278,7 @@ void read_scene(char* filename,Object* object) {
         }
         i++;
     }
+
 }
 
 
