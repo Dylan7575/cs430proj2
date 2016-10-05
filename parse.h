@@ -130,14 +130,7 @@ double* next_vector(FILE* json) {
 
 
 void read_scene(char* filename,Object* object) {
-    int c,i=0;
-    int len=strlen(filename);
-    char * last4 = &filename[len-4];
-
-    if(strcmp("json",last4)!=0){
-        fprintf(stderr,"Error: Not a Json file");
-        exit(1);
-    }
+    int c,i=0,cameras=0;
 
     FILE* json = fopen(filename, "r");
 
@@ -163,6 +156,7 @@ void read_scene(char* filename,Object* object) {
         c = fgetc(json);
         if (c == ']') {
             fprintf(stderr, "Error: This is the worst scene file EVER.\n");
+            exit(1);
             fclose(json);
             return;
         }
@@ -186,8 +180,12 @@ void read_scene(char* filename,Object* object) {
 
             //assigning kind values to temporary objects
             if (strcmp(value, "camera") == 0) {
+                if (cameras==1){
+                    fprintf(stderr,"Too many camera Objects");
+                    exit(1);
+                }
                 object[i].kind=0;
-
+                cameras=1;
             } else if (strcmp(value, "sphere") == 0) {
                 object[i].kind = 1;
             } else if (strcmp(value, "plane") == 0) {
@@ -205,6 +203,7 @@ void read_scene(char* filename,Object* object) {
                 if (c == '}') {
                     // stop parsing this object
                     break;
+
                 } else if (c == ',') {
                     // read another field
                     skip_ws(json);
@@ -218,43 +217,76 @@ void read_scene(char* filename,Object* object) {
                         (strcmp(key, "height") == 0) ||
                         (strcmp(key, "radius") == 0)) {
                         double value = next_number(json);
+                        char* err;
 
                         //based upon which value is there put value in correct temporary value
-                        if (strcmp(key, "width")==0) {
+                        if (strcmp(key, "width")==0 && object[i].kind==0) {
                             cam.width=value;
-                        } else if (strcmp(key, "height") == 0) {
+                             err = "width";
+                        }
+                        else if (strcmp(key, "height") == 0 && object[i].kind==0) {
                             cam.height=value;
-                        } else if (strcmp(key, "radius") == 0) {
+                            err = "height";
+
+                        } else if (strcmp(key, "radius") == 0&& object[i].kind==1) {
                             sphere.radius=value;
+                            err = "radius";
+                        }
+
+                        else{
+                            fprintf(stderr,"unexpected %s value on line %i",err,line);
+                            exit(1);
                         }
                     }
                     //based upon which value is there put value in correct temporary value
                     else if ((strcmp(key, "color") == 0) ||
                                (strcmp(key, "position") == 0) ||
                                (strcmp(key, "normal") == 0)) {
+
                         double* value = next_vector(json);
+
                         if (strcmp(key, "color") == 0) {
-                            if (object[i].kind == 1) {
-                                sphere.color[0] = value[0];
-                                sphere.color[1] = value[1];
-                                sphere.color[2] = value[2];
+
+                            if (object[i].kind == 1||object[i].kind==2) {
+
+                                if (object[i].kind == 1) {
+                                    sphere.color[0] = value[0];
+                                    sphere.color[1] = value[1];
+                                    sphere.color[2] = value[2];
+                                }
+
+                                if (object[i].kind == 2) {
+                                    plane.color[0] = value[0];
+                                    plane.color[1] = value[1];
+                                    plane.color[2] = value[2];
+                                }
                             }
-                            if (object[i].kind == 2) {
-                                plane.color[0] = value[0];
-                                plane.color[1] = value[1];
-                                plane.color[2] = value[2];
+                            else{
+
+                                fprintf(stderr,"unexpected position value on line: %i",line);
+                                exit(1);
                             }
                         }
                         if (strcmp(key, "position") == 0) {
-                            if (object[i].kind == 1) {
-                                sphere.center[0] = value[0];
-                                sphere.center[1]  = value[1];
-                                sphere.center[2]  = value[2];
+
+                            if (object[i].kind == 1||object[i].kind==2){
+
+                                if (object[i].kind == 1) {
+                                    sphere.center[0] = value[0];
+                                    sphere.center[1]  = value[1];
+                                    sphere.center[2]  = value[2];
+                                }
+
+
+                                if (object[i].kind == 2) {
+                                    plane.position[0]  = value[0];
+                                    plane.position[1]  = value[1];
+                                    plane.position[2]  = value[2];
+                                }
                             }
-                            if (object[i].kind == 2) {
-                                plane.position[0]  = value[0];
-                                plane.position[1]  = value[1];
-                                plane.position[2]  = value[2];
+                            else {
+                            fprintf(stderr,"unexpected position value on line: %i",line);
+                            exit(1);
                             }
                         }
                         if (strcmp(key, "normal") == 0) {
@@ -263,16 +295,22 @@ void read_scene(char* filename,Object* object) {
                                 plane.normal[1]  = value[1];
                                 plane.normal[2]  = value[2];
                             }
+                            else{
+                                fprintf(stderr,"unexpected normal value on line: %i",line);
+                                exit(1);
+                            }
                         }
+                    }
 
-
-
-                    } else {
+                    else {
                         fprintf(stderr, "Error: Unknown property, \"%s\", on line %d.\n",
                                 key, line);
+                        exit(1);
+
                         //char* value = next_string(json);
                     }
                     skip_ws(json);
+
                 } else {
                     fprintf(stderr, "Error: Unexpected value on line %d\n", line);
                     exit(1);
@@ -283,13 +321,17 @@ void read_scene(char* filename,Object* object) {
                 object[i].plane=plane;
             }
             skip_ws(json);
+
             c = next_c(json);
+
             if (c == ',') {
                 // noop
                 skip_ws(json);
+
             } else if (c == ']') {
                 fclose(json);
                 return;
+
             } else {
                 fprintf(stderr, "Error: Expecting ',' or ']' on line %d.\n", line);
                 exit(1);

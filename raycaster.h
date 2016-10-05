@@ -12,6 +12,10 @@ typedef struct{
 void write_p3(Pixel* pixel,int w,int h,char* filename){
 
     FILE *fh = fopen(filename,"w+");//opening the file handle
+    if(fh==NULL){
+        fprintf(stderr,"Could not Open Output File");
+        exit(1);
+    }
     fprintf(fh,"P3 %d %d 255 \n",w,h);//writing header
     for(int i = 0;i<w*h;i++){
         //looping through pix and writing it to the file
@@ -28,7 +32,10 @@ static inline double sqr(double v){
 }
 
 static inline void normalize(double* v){
-    double len =  sqr(v[0])+sqr(v[1])+sqr(v[2]);
+    double len = sqrt(sqr(v[0]) + sqr(v[1]) + sqr(v[2]));
+    v[0] /= len;
+    v[1] /= len;
+    v[2] /= len;
 }
 static inline double v3_dot(double* a, double* b) {
     return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
@@ -36,7 +43,6 @@ static inline double v3_dot(double* a, double* b) {
 
 /*********************Sphere Intersection*************/
 double sphere_intersection(double* ro,double* rd,double rad,double* center ){
-    normalize(center);
     //doing math
     double a = sqr(rd[0]) + sqr(rd[1]) + sqr(rd[2]);
     double b = 2 * (rd[0] * (ro[0] - center[0]) + rd[1] * (ro[1] - center[1]) + rd[2] * (ro[2] - center[2]));
@@ -47,7 +53,7 @@ double sphere_intersection(double* ro,double* rd,double rad,double* center ){
 
 
     if (det < 0)
-        return -1; // no intersection
+        return -1;
 
     det = sqrt(det);
 
@@ -61,14 +67,13 @@ double sphere_intersection(double* ro,double* rd,double rad,double* center ){
     if (t1 > 0)
         return t1;//returing t value
 
-    return -1;//error
+    return -1;
 }
 
 /*******************Plane Intersection*****************/
 double plane_intersection(double*ro,double*rd,double* normal,double* position){
-    //doing math
+    //doing math;
     normalize(normal);
-    normalize(position);
     double D = -(v3_dot(position,normal)); // distance from origin to plane
     double t = -(normal[0] * ro[0] + normal[1] * ro[1] + normal[2] * ro[2] + D) /
                 (normal[0] * rd[0] + normal[1] * rd[1] + normal[2] * rd[2]);
@@ -76,11 +81,11 @@ double plane_intersection(double*ro,double*rd,double* normal,double* position){
     if (t > 0)
         return t;//returning t value
 
-    return -1; //no intersection
+    return -1;
 }
 
 /*******************Raycasting*************************/
-void raycast(Object* objects,char* picture_height,char* picture_width,char* output_file){
+void raycast(Object* objects,char* picture_width,char* picture_height,char* output_file){
 
     int j=0,k=0;//loops
 
@@ -103,7 +108,7 @@ void raycast(Object* objects,char* picture_height,char* picture_width,char* outp
     int m =atoi(picture_height);
     int n = atoi(picture_width);
     double pixheight =h/m;
-    double pixwidth =w/m;
+    double pixwidth =w/n;
     /****************/
 
     Pixel p[m*n];//creating pixel array
@@ -135,7 +140,7 @@ void raycast(Object* objects,char* picture_height,char* picture_width,char* outp
                     case 0:
                         break;
                     default:
-                        fprintf(stderr,"Unkown Type Found");
+                        fprintf(stderr,"Unknown Type Found");
                         exit(-1);
                 }
 
