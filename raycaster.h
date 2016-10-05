@@ -36,7 +36,7 @@ static inline double v3_dot(double* a, double* b) {
 
 /*********************Sphere Intersection*************/
 double sphere_intersection(double* ro,double* rd,double rad,double* center ){
-
+    normalize(center);
     //doing math
     double a = sqr(rd[0]) + sqr(rd[1]) + sqr(rd[2]);
     double b = 2 * (rd[0] * (ro[0] - center[0]) + rd[1] * (ro[1] - center[1]) + rd[2] * (ro[2] - center[2]));
@@ -67,7 +67,9 @@ double sphere_intersection(double* ro,double* rd,double rad,double* center ){
 /*******************Plane Intersection*****************/
 double plane_intersection(double*ro,double*rd,double* normal,double* position){
     //doing math
-    double D = -(normal[0] * position[0] + normal[1] * position[1] + normal[2] * position[2]); // distance from origin to plane
+    normalize(normal);
+    normalize(position);
+    double D = -(v3_dot(position,normal)); // distance from origin to plane
     double t = -(normal[0] * ro[0] + normal[1] * ro[1] + normal[2] * ro[2] + D) /
                 (normal[0] * rd[0] + normal[1] * rd[1] + normal[2] * rd[2]);
 
@@ -80,7 +82,7 @@ double plane_intersection(double*ro,double*rd,double* normal,double* position){
 /*******************Raycasting*************************/
 void raycast(Object* objects,char* picture_height,char* picture_width,char* output_file){
 
-    int j,y,k=0;//loops
+    int j=0,k=0;//loops
 
     //camera position//
     double cx=0;
@@ -98,7 +100,7 @@ void raycast(Object* objects,char* picture_height,char* picture_width,char* outp
     /*setting the height and width for the camera and the scene and finding the pixheight and width from it*/
     double h =objects[j].cam.height;
     double w=objects[j].cam.width;
-    int m=atoi(picture_height);
+    int m =atoi(picture_height);
     int n = atoi(picture_width);
     double pixheight =h/m;
     double pixwidth =w/m;
@@ -133,6 +135,7 @@ void raycast(Object* objects,char* picture_height,char* picture_width,char* outp
                     case 0:
                         break;
                     default:
+                        fprintf(stderr,"Unkown Type Found");
                         exit(-1);
                 }
 

@@ -1,7 +1,7 @@
 //
 // Created by Dylan La Frenz on 9/27/16.
 //
-double line=1;
+int line=1;
 
 #include "includes.h"
 //creating a struct for sphere camera and plane
@@ -26,7 +26,8 @@ typedef struct{
     Sphere sphere;
     Plane plane;
 
-}Object;
+}Object; //storing them in an object array
+
 int next_c(FILE* json) {
     int c = fgetc(json);
 #ifdef DEBUG
@@ -97,9 +98,13 @@ char* next_string(FILE* json) {
 
 double next_number(FILE* json) {
     double value;
-    fscanf(json, "%lf", &value);
-    // Error check this..
-    //printf("%lf\n",value);
+    int fail;
+    fail =fscanf(json, "%lf", &value);
+    if (fail==EOF||fail==0){
+        fprintf(stderr,"Not a valid Number on Line Number%d",line);
+        exit(1);
+
+    }
     return value;
 }
 
@@ -126,7 +131,13 @@ double* next_vector(FILE* json) {
 
 void read_scene(char* filename,Object* object) {
     int c,i=0;
+    int len=strlen(filename);
+    char * last4 = &filename[len-4];
 
+    if(strcmp("json",last4)!=0){
+        fprintf(stderr,"Error: Not a Json file");
+        exit(1);
+    }
 
     FILE* json = fopen(filename, "r");
 
@@ -145,6 +156,7 @@ void read_scene(char* filename,Object* object) {
     // Find the objects
 
     while (1) {
+        //creating temporary Objects to assign to Object array later
         Plane plane;
         Sphere sphere;
         Camera cam;
@@ -172,6 +184,7 @@ void read_scene(char* filename,Object* object) {
 
             char* value = next_string(json);
 
+            //assigning kind values to temporary objects
             if (strcmp(value, "camera") == 0) {
                 object[i].kind=0;
 
@@ -199,10 +212,14 @@ void read_scene(char* filename,Object* object) {
                     skip_ws(json);
                     expect_c(json, ':');
                     skip_ws(json);
+
+                    //checking which json value is next
                     if ((strcmp(key, "width") == 0) ||
                         (strcmp(key, "height") == 0) ||
                         (strcmp(key, "radius") == 0)) {
                         double value = next_number(json);
+
+                        //based upon which value is there put value in correct temporary value
                         if (strcmp(key, "width")==0) {
                             cam.width=value;
                         } else if (strcmp(key, "height") == 0) {
@@ -210,7 +227,9 @@ void read_scene(char* filename,Object* object) {
                         } else if (strcmp(key, "radius") == 0) {
                             sphere.radius=value;
                         }
-                    } else if ((strcmp(key, "color") == 0) ||
+                    }
+                    //based upon which value is there put value in correct temporary value
+                    else if ((strcmp(key, "color") == 0) ||
                                (strcmp(key, "position") == 0) ||
                                (strcmp(key, "normal") == 0)) {
                         double* value = next_vector(json);
@@ -258,6 +277,7 @@ void read_scene(char* filename,Object* object) {
                     fprintf(stderr, "Error: Unexpected value on line %d\n", line);
                     exit(1);
                 }
+                //assigning values in object array to temporary Objects
                 object[i].cam=cam;
                 object[i].sphere=sphere;
                 object[i].plane=plane;
@@ -268,7 +288,6 @@ void read_scene(char* filename,Object* object) {
                 // noop
                 skip_ws(json);
             } else if (c == ']') {
-               // printf("%f",object->sphere.radius);
                 fclose(json);
                 return;
             } else {
